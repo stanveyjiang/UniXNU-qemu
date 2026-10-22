@@ -75,9 +75,18 @@ qemu = shutil.which('qemu-system-aarch64')
 if not qemu:
     raise SystemExit('qemu-system-aarch64 not found (brew install qemu)')
 code = Path(qemu).resolve().parents[1] / 'share/qemu/edk2-aarch64-code.fd'
+variables_template = None
+if not code.is_file():
+    linux_code = Path('/usr/share/AAVMF/AAVMF_CODE.no-secboot.fd')
+    linux_vars = Path('/usr/share/AAVMF/AAVMF_VARS.fd')
+    if linux_code.is_file() and linux_vars.is_file():
+        code = linux_code
+        variables_template = linux_vars
+    elif Path('/usr/share/qemu-efi-aarch64/QEMU_EFI.fd').is_file():
+        code = Path('/usr/share/qemu-efi-aarch64/QEMU_EFI.fd')
 payload = WORK / 'payload/payload.img'
 unixnu = WORK / 'package/Build/Out/AARCH64-DEBUG/UniXNU.efi'
-for path, step in ((code, 'brew install qemu'), (payload, 'unixnu build payload'), (unixnu, 'unixnu build package')):
+for path, step in ((code, 'install QEMU AArch64 firmware'), (payload, 'unixnu build payload'), (unixnu, 'unixnu build package')):
     if not path.is_file():
         raise SystemExit(f'{path} missing ({step})')
 darwinboot = ROOT / 'build/darwinboot-efi/DarwinBoot.efi'
@@ -148,8 +157,11 @@ if args.native_user:
 
 work = Path(tempfile.mkdtemp(prefix='unixnu-qemu-'))   # short path: a QMP socket name is limited to 104 bytes
 variables = work / 'vars.fd'
-with variables.open('wb') as f:
-    f.truncate(code.stat().st_size)
+if variables_template:
+    shutil.copyfile(variables_template, variables)
+else:
+    with variables.open('wb') as f:
+        f.truncate(code.stat().st_size)
 sock = work / 'qmp.sock'
 command = [qemu, '-M', 'virt,virtualization=off,secure=off,gic-version=3', '-accel', args.accel,
            '-cpu', 'cortex-a710' if args.accel == 'tcg' else 'host',

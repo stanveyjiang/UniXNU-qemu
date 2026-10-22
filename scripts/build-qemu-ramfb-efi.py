@@ -35,6 +35,11 @@ env = dict(os.environ, WORKSPACE=str(work), CONF_PATH=str(conf), EDK_TOOLS_PATH=
            PATH=os.pathsep.join([str(tools / 'BinWrappers/PosixLike'), str(tools / 'Source/C/bin'), os.environ['PATH']]))
 subprocess.run(['build', '-p', 'QemuRamfbPkg/QemuRamfbPkg.dsc', '-a', 'AARCH64', '-b', 'DEBUG', '-t', 'CLANGPDB',
                 '-n', str(os.cpu_count() or 4)], cwd=work, env=env, check=True, stdout=subprocess.DEVNULL)
-built = work / 'Build/QemuRamfb/DEBUG_CLANGPDB/AARCH64/QemuRamfb.efi'
+built = next((path for path in (
+    work / 'Build/QemuRamfb/DEBUG_CLANGPDB/AARCH64/QemuRamfb.efi',
+    work / 'build/QemuRamfb/DEBUG_CLANGPDB/AARCH64/QemuRamfb.efi',
+) if path.is_file()), None)
+if built is None:
+    raise SystemExit('QemuRamfb.efi was not produced by the EDK II build')
 shutil.copyfile(built, work / 'QemuRamfb.efi')
 print(work / 'QemuRamfb.efi')

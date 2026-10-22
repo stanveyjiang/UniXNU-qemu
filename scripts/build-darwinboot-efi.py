@@ -34,6 +34,11 @@ env = dict(os.environ, WORKSPACE=str(work), CONF_PATH=str(conf), EDK_TOOLS_PATH=
            PATH=os.pathsep.join([str(tools / 'BinWrappers/PosixLike'), str(tools / 'Source/C/bin'), os.environ['PATH']]))
 subprocess.run(['build', '-p', 'DarwinBootPkg/DarwinBoot.dsc', '-a', 'AARCH64', '-b', 'DEBUG', '-t', 'CLANGPDB',
                 '-n', str(os.cpu_count() or 4)], cwd=work, env=env, check=True, stdout=subprocess.DEVNULL)
-built = work / 'Build/DarwinBoot/DEBUG_CLANGPDB/AARCH64/DarwinBoot.efi'
+built = next((path for path in (
+    work / 'Build/DarwinBoot/DEBUG_CLANGPDB/AARCH64/DarwinBoot.efi',
+    work / 'build/DarwinBoot/DEBUG_CLANGPDB/AARCH64/DarwinBoot.efi',
+) if path.is_file()), None)
+if built is None:
+    raise SystemExit('DarwinBoot.efi was not produced by the EDK II build')
 shutil.copyfile(built, work / 'DarwinBoot.efi')
 print(work / 'DarwinBoot.efi')
